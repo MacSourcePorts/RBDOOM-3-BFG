@@ -45,3 +45,5 @@ neo/.kdev4
 neo/neo.kdev4
 neo/.idea/
 neo/cmake-build-*/
+release*
+build_macos_values.sh
