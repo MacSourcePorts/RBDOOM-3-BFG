@@ -1,45 +1,55 @@
-D3BFG_VERSION="1.11.0"
-ICNSDIR="neo"
-ICNS="doom3.icns"
+# game/app specific values
+APP_VERSION="1.2.0"
+ICONSDIR="neo"
+ICONSFILENAME="doom3bfg"
 PRODUCT_NAME="RBDoom3BFG"
+EXECUTABLE_NAME="RBDoom3BFG"
+PKGINFO="APPLRBD3"
+COPYRIGHT_TEXT="DOOM 3 BFG Copyright © 1997-2012 id Software, Inc. All rights reserved."
+
+# For parallel make on multicore boxes...
+NCPU=`sysctl -n hw.ncpu`
+
+# create makefiles with cmake
+cd ..
+rm -rf build-x86_64
+mkdir build-x86_64
+cd build-x86_64
+/usr/local/bin/cmake -G "Unix Makefiles" -DCMAKE_C_FLAGS_RELEASE="-arch x86_64" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DSDL2=ON -DFFMPEG=OFF -DBINKDEC=ON -DOPENAL_LIBRARY=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/lib/libopenal.dylib -DOPENAL_INCLUDE_DIR=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/include -DSDL2_INCLUDE_DIRS=/usr/local/opt/sdl2/include/SDL2 -DSDL2_LIBRARIES=/usr/local/opt/sdl2/lib ../neo -Wno-dev
+
+cd ..
+rm -rf build-arm64
+mkdir build-arm64
+cd build-arm64
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DSDL2=ON -DFFMPEG=OFF -DBINKDEC=ON -DOPENAL_LIBRARY=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/lib/libopenal.dylib -DOPENAL_INCLUDE_DIR=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/include ../neo -Wno-dev
+
+# perform builds with make
+cd ..
+cd build-x86_64
+make -j$NCPU
+
+cd ..
+cd build-arm64
+make -j$NCPU
+
+cd ..
+
+# non-app speficic values
 WRAPPER_EXTENSION="app"
 WRAPPER_NAME="${PRODUCT_NAME}.${WRAPPER_EXTENSION}"
 CONTENTS_FOLDER_PATH="${WRAPPER_NAME}/Contents"
 UNLOCALIZED_RESOURCES_FOLDER_PATH="${CONTENTS_FOLDER_PATH}/Resources"
 EXECUTABLE_FOLDER_PATH="${CONTENTS_FOLDER_PATH}/MacOS"
-EXECUTABLE_NAME="RBDoom3BFG"
-
 BUILT_PRODUCTS_DIR="release"
-PKGINFO="APPLRBD3"
+ICONS="${ICONSFILENAME}.icns"
+BUNDLE_ID="com.macsourceports.${PRODUCT_NAME}"
 
-# For parallel make on multicore boxes...
-NCPU=`sysctl -n hw.ncpu`
+# create the app bundle
 
-# cd ..
-# rm -rf build-x86_64
-# mkdir build-x86_64
-# cd build-x86_64
-# /usr/local/bin/cmake -G "Unix Makefiles" -DCMAKE_C_FLAGS_RELEASE="-arch x86_64" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DSDL2=ON -DFFMPEG=OFF -DBINKDEC=ON -DOPENAL_LIBRARY=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/lib/libopenal.dylib -DOPENAL_INCLUDE_DIR=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/include -DSDL2_INCLUDE_DIRS=/usr/local/opt/sdl2/include/SDL2 -DSDL2_LIBRARIES=/usr/local/opt/sdl2/lib ../neo -Wno-dev
-
-# cd ..
-# rm -rf build-arm64
-# mkdir build-arm64
-# cd build-arm64
-# cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12 -DSDL2=ON -DFFMPEG=OFF -DBINKDEC=ON -DOPENAL_LIBRARY=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/lib/libopenal.dylib -DOPENAL_INCLUDE_DIR=/Users/tomkidd/Documents/GitHub/MSPStore/opt/openal-soft/include ../neo -Wno-dev
-
-# cd ..
-# cd build-x86_64
-# make -j$NCPU
-
-# cd ..
-# cd build-arm64
-# make -j$NCPU
-
-cd ..
-# make the thing
+# remove any existing app bundle
 rm -rf "${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}"
 
-# make the application bundle directories
+# make the app bundle directories
 if [ ! -d "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}" ]; then
 	mkdir -p "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}" || exit 1;
 fi
@@ -50,13 +60,13 @@ if [ ! -d "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}" ]; then
 	mkdir -p "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}" || exit 1;
 fi
 
-lipo build-x86_64/RBDoom3BFG build-arm64/RBDoom3BFG -output "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/RBDoom3BFG" -create
+lipo build-x86_64/${EXECUTABLE_NAME} build-arm64/${EXECUTABLE_NAME} -output "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/${EXECUTABLE_NAME}" -create
 lipo build-x86_64/idlib/libidlib.a build-arm64/idlib/libidlib.a -output "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}/idlib/libidlib.a" -create
 
 cp /Users/tomkidd/Documents/GitHub/MSPStore/Cellar/sdl2/2.0.16/lib/libSDL2-2.0.0.dylib "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}"
 cp /Users/tomkidd/Documents/GitHub/MSPStore/Cellar/openal-soft/1.21.1/lib/libopenal.1.dylib "${BUILT_PRODUCTS_DIR}/${EXECUTABLE_FOLDER_PATH}"
 
-cp ${ICNSDIR}/${ICNS} "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/$ICNS" || exit 1;
+cp ${ICONSDIR}/${ICONS} "${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/${ICONS}" || exit 1;
 echo -n ${PKGINFO} > "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/PkgInfo" || exit 1;
 
 # use install_name tool to point executable to bundled resources (probably wrong long term way to do it)
@@ -77,9 +87,9 @@ PLIST="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
     <key>CFBundleExecutable</key>
     <string>${EXECUTABLE_NAME}</string>
     <key>CFBundleIconFile</key>
-    <string>doom3</string>
+    <string>${ICONSFILENAME}</string>
     <key>CFBundleIdentifier</key>
-    <string>com.macsourceports.${PRODUCT_NAME}</string>
+    <string>${BUNDLE_ID}</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -87,11 +97,11 @@ PLIST="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>${D3BFG_VERSION}</string>
+    <string>${APP_VERSION}</string>
     <key>CFBundleSignature</key>
     <string>????</string>
     <key>CFBundleVersion</key>
-    <string>${D3BFG_VERSION}</string>
+    <string>${APP_VERSION}</string>
     <key>CGDisableCoalescedUpdates</key>
     <true/>
     <key>LSMinimumSystemVersion</key>
@@ -104,7 +114,7 @@ PLIST="<?xml version=\"1.0\" encoding=\"UTF-8\"?>
         <string>11.0</string>
     </dict>
 	<key>NSHumanReadableCopyright</key>
-    <string>DOOM 3 BFG Copyright © 1997-2021 id Software, Inc. All rights reserved.</string>
+    <string>${COPYRIGHT_TEXT}</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
@@ -119,7 +129,7 @@ echo "${PLIST}" > "${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Info.plist"
 echo "bundle done."
 
 # user-specific values
-# specify the actual values in a separate file called build_macos_values.sh
+# specify the actual values in a separate file called build_macos_values.local
 
 # ****************************************************************************************
 # identity as specified in Keychain
@@ -135,21 +145,13 @@ ASC_PASSWORD="@keychain:notarize-app"
 ASC_PROVIDER="XXXXXXXXX"
 # ****************************************************************************************
 
-source neo/build_macos_values.sh
-
-# release build location
-RELEASE_LOCATION="build/release-darwin-universal2"
-
-# release build name
-RELEASE_BUILD="RBDoom3BFG.app"
+source neo/build_macos_values.local
 
 # Pre-notarized zip file (not what is shipped)
-PRE_NOTARIZED_ZIP="RBDoom3BFG_prenotarized.zip"
+PRE_NOTARIZED_ZIP="${PRODUCT_NAME}_prenotarized.zip"
 
 # Post-notarized zip file (shipped)
-POST_NOTARIZED_ZIP="RBDoom3BFG_notarized.zip"
-
-BUNDLE_ID="com.macsourceports.RBDoom3BFG"
+POST_NOTARIZED_ZIP="${PRODUCT_NAME}_notarized.zip"
 
 # sign the resulting app bundle
 echo "signing..."

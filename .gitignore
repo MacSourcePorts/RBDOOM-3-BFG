@@ -46,4 +46,5 @@ neo/neo.kdev4
 neo/.idea/
 neo/cmake-build-*/
 release*
-build_macos_values.sh
+build_macos_values.local
+.DS_Store
