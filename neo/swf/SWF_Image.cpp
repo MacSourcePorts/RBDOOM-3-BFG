@@ -183,7 +183,7 @@ Now that all images have been found, allocate them in an atlas
 and write it out.
 ========================
 */
-void RectAllocator( const idList<idVec2i>& inputSizes, idList<idVec2i>& outputPositions, idVec2i& totalSize );
+void RectAllocator( const idList<idVec2i>& inputSizes, idList<idVec2i>& outputPositions, idVec2i& totalSize, const int START_MAX = 16384, const int imageMax = 1024 );
 float RectPackingFraction( const idList<idVec2i>& inputSizes, const idVec2i totalSize );
 
 void idSWF::WriteSwfImageAtlas( const char* filename )
@@ -339,7 +339,8 @@ void idSWF::WriteSwfImageAtlas( const char* filename )
 	}
 
 	// the TGA is only for examination during development
-	R_WriteTGA( filename, swfAtlas.Ptr(), atlasWidth, atlasHeight, false, "fs_basepath" );
+	//R_WriteTGA( filename, swfAtlas.Ptr(), atlasWidth, atlasHeight, false, "fs_basepath" );
+	R_WritePNG( filename, swfAtlas.Ptr(), 4, atlasWidth, atlasHeight, true, "fs_basepath" );
 }
 
 /*

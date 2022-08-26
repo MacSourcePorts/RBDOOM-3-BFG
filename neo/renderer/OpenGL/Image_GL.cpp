@@ -53,6 +53,7 @@ idImage::idImage( const char* name ) : imgName( name )
 	repeat = TR_REPEAT;
 	usage = TD_DEFAULT;
 	cubeFiles = CF_2D;
+	cubeMapSize = 0;
 
 	referencedOutsideLevelLoad = false;
 	levelLoadReferenced = false;
@@ -418,16 +419,6 @@ void idImage::SetSamplerState( textureFilter_t tf, textureRepeat_t tr )
 
 /*
 ========================
-idImage::SetPixel
-========================
-*/
-void idImage::SetPixel( int mipLevel, int x, int y, const void* data, int dataSize )
-{
-	SubImageUpload( mipLevel, x, y, 0, 1, 1, data );
-}
-
-/*
-========================
 idImage::SetTexParameters
 ========================
 */
@@ -550,7 +541,7 @@ void idImage::SetTexParameters()
 		}
 	}
 
-	// RB: disabled use of unreliable extension that can make the game look worse
+	// RB: disabled use of unreliable extension that can make the game look worse but doesn't save any VRAM
 	/*
 	if( glConfig.textureLODBiasAvailable && ( usage != TD_FONT ) )
 	{
@@ -675,6 +666,12 @@ void idImage::AllocImage()
 			internalFormat = GL_DEPTH_COMPONENT;
 			dataFormat = GL_DEPTH_COMPONENT;
 			dataType = GL_UNSIGNED_BYTE;
+			break;
+
+		case FMT_DEPTH_STENCIL:
+			internalFormat = GL_DEPTH24_STENCIL8;
+			dataFormat = GL_DEPTH_STENCIL;
+			dataType = GL_UNSIGNED_INT_24_8;
 			break;
 
 		case FMT_SHADOW_ARRAY:

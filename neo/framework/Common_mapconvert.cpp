@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2015 Robert Beckebans
+Copyright (C) 2015-2021 Robert Beckebans
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -687,6 +687,95 @@ CONSOLE_COMMAND( convertMapToJSON, "Convert .map file to new .json map format wi
 		//convertedFileName += "_converted";
 
 		map.WriteJSON( convertedFileName, ".json" );
+	}
+
+	common->SetRefreshOnPrint( false );
+}
+
+CONSOLE_COMMAND( convertMapToValve220, "Convert .map file to the Valve 220 map format for TrenchBroom", idCmdSystem::ArgCompletion_MapNameNoJson )
+{
+	common->SetRefreshOnPrint( true );
+
+	if( args.Argc() != 2 )
+	{
+		common->Printf( "Usage: convertMapToValve220 <map>\n" );
+		return;
+	}
+
+	idStr filename = args.Argv( 1 );
+	if( !filename.Length() )
+	{
+		return;
+	}
+	filename.StripFileExtension();
+
+	idStr mapName;
+	sprintf( mapName, "maps/%s.map", filename.c_str() );
+
+	idMapFile map;
+	if( map.Parse( mapName, true, false ) )
+	{
+		// make sure we have access to all .bimage files for that map
+		fileSystem->BeginLevelLoad( filename, NULL, 0 );
+
+		map.ConvertToValve220Format();
+
+		fileSystem->EndLevelLoad();
+
+		idStrStatic< MAX_OSPATH > canonical = mapName;
+		canonical.ToLower();
+
+		idStrStatic< MAX_OSPATH > extension;
+		canonical.StripFileExtension();
+
+		idStrStatic< MAX_OSPATH > convertedFileName;
+
+		convertedFileName = canonical;
+		convertedFileName += "_valve220";
+
+		map.Write( convertedFileName, ".map" );
+	}
+
+	common->SetRefreshOnPrint( false );
+}
+
+
+CONSOLE_COMMAND( convertMapQuakeToDoom, "Convert Quake .map in Valve 220 map format for Doom 3 BFG", idCmdSystem::ArgCompletion_MapNameNoJson )
+{
+	common->SetRefreshOnPrint( true );
+
+	if( args.Argc() != 2 )
+	{
+		common->Printf( "Usage: convertMapQuakeToDoom <map>\n" );
+		return;
+	}
+
+	idStr filename = args.Argv( 1 );
+	if( !filename.Length() )
+	{
+		return;
+	}
+	filename.StripFileExtension();
+
+	idStr mapName;
+	sprintf( mapName, "maps/%s.map", filename.c_str() );
+
+	idMapFile map;
+	if( map.Parse( mapName, true, false ) )
+	{
+		map.ConvertQuakeToDoom();
+
+		idStrStatic< MAX_OSPATH > canonical = mapName;
+		canonical.ToLower();
+
+		idStrStatic< MAX_OSPATH > extension;
+		canonical.StripFileExtension();
+
+		//idStrStatic< MAX_OSPATH > convertedFileName;
+		//convertedFileName = canonical;
+		//convertedFileName += "_valve220";
+
+		map.Write( canonical, ".map" );
 	}
 
 	common->SetRefreshOnPrint( false );

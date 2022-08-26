@@ -3,7 +3,7 @@
 
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
-Copyright (C) 2014-2016 Robert Beckebans
+Copyright (C) 2014-2021 Robert Beckebans
 Copyright (C) 2014-2016 Kot in Action Creative Artel
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
@@ -99,8 +99,7 @@ idCVar r_useSeamlessCubeMap( "r_useSeamlessCubeMap", "1", CVAR_RENDERER | CVAR_B
 idCVar r_maxAnisotropicFiltering( "r_maxAnisotropicFiltering", "8", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_INTEGER, "limit aniso filtering" );
 idCVar r_useTrilinearFiltering( "r_useTrilinearFiltering", "1", CVAR_RENDERER | CVAR_ARCHIVE | CVAR_BOOL, "Extra quality filtering" );
 // RB: not used anymore
-// SRS - Reenabled LODBIAS
-idCVar r_lodBias( "r_lodBias", "0.5", CVAR_RENDERER | CVAR_ARCHIVE, /*"UNUSED: */"image lod bias" );
+idCVar r_lodBias( "r_lodBias", "0.5", CVAR_RENDERER | CVAR_ARCHIVE, "UNUSED: image lod bias" );
 // RB end
 
 idCVar r_useStateCaching( "r_useStateCaching", "1", CVAR_RENDERER | CVAR_BOOL, "avoid redundant state changes in GL_*() calls" );
@@ -618,7 +617,8 @@ void R_TestVideo_f( const idCmdArgs& args )
 
 	cinData_t	cin;
 	cin = tr.testVideo->ImageForTime( 0 );
-	if( cin.imageY == NULL )
+	// SRS - Also handle ffmpeg and original RoQ decoders for test videos (using cin.image)
+	if( cin.imageY == NULL && cin.image == NULL )
 	{
 		delete tr.testVideo;
 		tr.testVideo = NULL;
@@ -631,7 +631,8 @@ void R_TestVideo_f( const idCmdArgs& args )
 	int	len = tr.testVideo->AnimationLength();
 	common->Printf( "%5.1f seconds of video\n", len * 0.001 );
 
-	tr.testVideoStartTime = tr.primaryRenderView.time[1];
+	// SRS - Not needed or used since InitFromFile() sets the correct start time automatically
+	//tr.testVideoStartTime = tr.primaryRenderView.time[1];
 
 	// try to play the matching wav file
 	idStr	wavString = args.Argv( ( args.Argc() == 2 ) ? 1 : 2 );

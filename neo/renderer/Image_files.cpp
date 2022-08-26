@@ -4,6 +4,7 @@
 Doom 3 BFG Edition GPL Source Code
 Copyright (C) 1993-2012 id Software LLC, a ZeniMax Media company.
 Copyright (C) 2012-2021 Robert Beckebans
+Copyright (C) 2022 Stephen Pridham
 
 This file is part of the Doom 3 BFG Edition GPL Source Code ("Doom 3 BFG Edition Source Code").
 
@@ -130,7 +131,7 @@ void R_WriteTGA( const char* filename, const byte* data, int width, int height, 
 	fileSystem->WriteFile( filename, buffer, bufferSize, basePath );
 }
 
-static void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
+void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
 static void LoadJPG( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp );
 
 /*
@@ -164,7 +165,7 @@ TARGA LOADING
 LoadTGA
 =============
 */
-static void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp )
+void LoadTGA( const char* name, byte** pic, int* width, int* height, ID_TIME_T* timestamp )
 {
 	int		columns, rows, numPixels, fileSize, numBytes;
 	byte*	pixbuf;
@@ -668,7 +669,7 @@ extern "C"
 LoadPNG
 =============
 */
-static void LoadPNG( const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp )
+void LoadPNG( const char* filename, unsigned char** pic, int* width, int* height, ID_TIME_T* timestamp )
 {
 	byte*	fbuffer;
 #if PNG_LIBPNG_VER_MAJOR > 1 || PNG_LIBPNG_VER_MINOR > 4
@@ -1514,7 +1515,7 @@ R_LoadCubeImages
 Loads six files with proper extensions
 =======================
 */
-bool R_LoadCubeImages( const char* imgName, cubeFiles_t extensions, byte* pics[6], int* outSize, ID_TIME_T* timestamp )
+bool R_LoadCubeImages( const char* imgName, cubeFiles_t extensions, byte* pics[6], int* outSize, ID_TIME_T* timestamp, int cubeMapSize )
 {
 	int		i, j;
 	const char*	cameraSides[6] =  { "_forward.tga", "_back.tga", "_left.tga", "_right.tga",
@@ -1544,6 +1545,74 @@ bool R_LoadCubeImages( const char* imgName, cubeFiles_t extensions, byte* pics[6
 	if( timestamp )
 	{
 		*timestamp = 0;
+	}
+
+	if( extensions == CF_SINGLE && cubeMapSize != 0 )
+	{
+		ID_TIME_T thisTime;
+		byte* thisPic[1];
+		thisPic[0] = nullptr;
+
+		if( pics )
+		{
+			R_LoadImageProgram( imgName, thisPic, &width, &height, &thisTime );
+		}
+		else
+		{
+			// load just the timestamps
+			R_LoadImageProgram( imgName, nullptr, &width, &height, &thisTime );
+		}
+
+
+		if( thisTime == FILE_NOT_FOUND_TIMESTAMP )
+		{
+			return false;
+		}
+
+		if( timestamp )
+		{
+			if( thisTime > *timestamp )
+			{
+				*timestamp = thisTime;
+			}
+		}
+
+		if( pics )
+		{
+			*outSize = cubeMapSize;
+
+			for( int i = 0; i < 6; i++ )
+			{
+				pics[i] = R_GenerateCubeMapSideFromSingleImage( thisPic[0], width, height, cubeMapSize, i );
+				switch( i )
+				{
+					case 0:	// forward
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
+					case 1:	// back
+						R_RotatePic( pics[i], cubeMapSize );
+						R_HorizontalFlip( pics[i], cubeMapSize, cubeMapSize );
+						R_VerticalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 2:	// left
+						R_VerticalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 3:	// right
+						R_HorizontalFlip( pics[i], cubeMapSize, cubeMapSize );
+						break;
+					case 4:	// up
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
+					case 5: // down
+						R_RotatePic( pics[i], cubeMapSize );
+						break;
+				}
+			}
+
+			R_StaticFree( thisPic[0] );
+		}
+
+		return true;
 	}
 
 	for( i = 0 ; i < 6 ; i++ )

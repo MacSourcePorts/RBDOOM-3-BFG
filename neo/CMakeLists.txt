@@ -9,6 +9,12 @@ if(CMAKE_MAJOR_VERSION EQUAL 3 AND CMAKE_MINOR_VERSION GREATER_EQUAL 6)
 	set_property (DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT RBDoom3BFG)
 endif()
 	
+option(STANDALONE
+		"Skip DOOM-3-BFG base/ folder and use assets/ instead" OFF)
+
+option(DOOM_CLASSIC
+		"Build with Doom 1 & 2" ON)
+
 option(FORCE_COLOR_OUTPUT
 		"Always produce ANSI-colored output (GNU/Clang only)." OFF)
 
@@ -16,7 +22,7 @@ option(COMPILE_COMMANDS
 		"Generate compile_commands.json" OFF)
 
 option(USE_MFC_TOOLS
-		"Compile the built-in MFC based tools" OFF)
+		"Compile the legacy MFC based tools (unsupported)" OFF)
 
 option(USE_PRECOMPILED_HEADERS
 		"Use precompiled headers during build" ON)
@@ -45,11 +51,8 @@ option(USE_MoltenVK
 option(ONATIVE
 		"Optimize for the host CPU" OFF)
 		
-option(WINRT
-		"Build for Windows RT" OFF)
-		
 option(WINDOWS10
-		"Build for Windows 10" OFF)
+		"Build for Windows 10+" OFF)
 		
 option(USE_SYSTEM_ZLIB
                 "Use the system zlib instead of the bundled one" OFF)
@@ -285,7 +288,7 @@ elseif(MSVC)
 					-D_MBCS
 					-DUSE_EXCEPTIONS)
 
-	if( WINRT OR WINDOWS10 ) # Windows RT
+	if( WINDOWS10 ) # Windows RT
 		add_definitions(-DUSE_WINRT)
 	endif()
 					
@@ -308,9 +311,11 @@ if (USE_INTRINSICS_SSE)
 	add_definitions(-DUSE_INTRINSICS_SSE)
 endif()
 
-#if(STANDALONE)
-#	add_definitions(-DSTANDALONE)
-#endif()
+if(STANDALONE)
+	add_definitions(-DSTANDALONE)
+
+	set(DOOM_CLASSIC OFF)
+endif()
 
 if (USE_SYSTEM_ZLIB)
   find_package(ZLIB REQUIRED)
@@ -675,7 +680,8 @@ set(SOUND_INCLUDES
 	sound/snd_local.h
 	sound/sound.h
 	sound/SoundVoice.h
-	sound/WaveFile.h)
+	sound/WaveFile.h
+	sound/CinematicAudio.h)
 	
 set(SOUND_SOURCES
 	sound/snd_emitter.cpp
@@ -683,28 +689,31 @@ set(SOUND_SOURCES
 	sound/snd_system.cpp
 	sound/snd_world.cpp
 	sound/SoundVoice.cpp
-	sound/WaveFile.cpp
-	)
+	sound/WaveFile.cpp)
 	
 set(XAUDIO2_INCLUDES
 	sound/XAudio2/XA2_SoundHardware.h
 	sound/XAudio2/XA2_SoundSample.h
-	sound/XAudio2/XA2_SoundVoice.h)
+	sound/XAudio2/XA2_SoundVoice.h
+	sound/Xaudio2/XA2_CinematicAudio.h)
 	
 set(XAUDIO2_SOURCES
 	sound/XAudio2/XA2_SoundHardware.cpp
 	sound/XAudio2/XA2_SoundSample.cpp
-	sound/XAudio2/XA2_SoundVoice.cpp)
+	sound/XAudio2/XA2_SoundVoice.cpp
+	sound/Xaudio2/XA2_CinematicAudio.cpp)
 	
 set(OPENAL_INCLUDES
 	sound/OpenAL/AL_SoundHardware.h
 	sound/OpenAL/AL_SoundSample.h
-	sound/OpenAL/AL_SoundVoice.h)
+	sound/OpenAL/AL_SoundVoice.h
+	sound/OpenAL/AL_CinematicAudio.h)
 	
 set(OPENAL_SOURCES
 	sound/OpenAL/AL_SoundHardware.cpp
 	sound/OpenAL/AL_SoundSample.cpp
-	sound/OpenAL/AL_SoundVoice.cpp)
+	sound/OpenAL/AL_SoundVoice.cpp
+	sound/OpenAL/AL_CinematicAudio.cpp)
 
 set(STUBAUDIO_INCLUDES
 	sound/stub/SoundStub.h)
@@ -1361,8 +1370,6 @@ set(RBDOOM3_INCLUDES
 			${UI_INCLUDES}
 			${SWF_INCLUDES}
 			${COMMON_INCLUDES}
-			${DOOMCLASSIC_INCLUDES}
-			${TIMIDITY_INCLUDES}
 			
 			${COMPILER_INCLUDES}
 			${COMPILER_AAS_INCLUDES} ${COMPILER_AAS_SOURCES}
@@ -1409,8 +1416,6 @@ set(RBDOOM3_SOURCES
 			${UI_SOURCES}
 			${SWF_SOURCES}
 			${COMMON_SOURCES}
-			${DOOMCLASSIC_SOURCES}
-			${TIMIDITY_SOURCES}
 			
 			${COMPILER_AAS_SOURCES}
 			${COMPILER_DMAP_SOURCES}
@@ -1427,7 +1432,15 @@ set(RBDOOM3_SOURCES
 			${GAMED3XP_SCRIPT_SOURCES}
 			)
 
-add_definitions(-DUSE_DOOMCLASSIC)
+if(DOOM_CLASSIC)
+	add_definitions(-DUSE_DOOMCLASSIC)
+
+	list(APPEND RBDOOM3_INCLUDES ${DOOMCLASSIC_INCLUDES})
+	list(APPEND RBDOOM3_INCLUDES ${TIMIDITY_INCLUDES})
+	
+	list(APPEND RBDOOM3_SOURCES ${DOOMCLASSIC_SOURCES})
+	list(APPEND RBDOOM3_SOURCES ${TIMIDITY_SOURCES})
+endif()
 
 add_definitions(-D__DOOM__
 				#-DBUILD_FREETYPE
@@ -1494,9 +1507,10 @@ if(MSVC)
 		endif()
 		
 		list(APPEND RBDOOM3_INCLUDES ${OPENAL_INCLUDES})
-		list(APPEND RBDOOM3_SOURCES
-			${OPENAL_SOURCES}
-			${DOOMCLASSIC_OPENAL_SOURCES})
+		list(APPEND RBDOOM3_SOURCES	${OPENAL_SOURCES})
+		if(DOOM_CLASSIC)
+			list(APPEND RBDOOM3_SOURCES	${DOOMCLASSIC_OPENAL_SOURCES})
+		endif()		
 		
 		set(OpenAL_LIBRARIES
 			OpenAL32)
@@ -1509,9 +1523,11 @@ if(MSVC)
 		endif()
 	else()
 		list(APPEND RBDOOM3_INCLUDES ${XAUDIO2_INCLUDES})
-		list(APPEND RBDOOM3_SOURCES
-			${XAUDIO2_SOURCES}
-			${DOOMCLASSIC_XAUDIO2_SOURCES})
+		list(APPEND RBDOOM3_SOURCES	${XAUDIO2_SOURCES})
+
+		if(DOOM_CLASSIC)
+			list(APPEND RBDOOM3_SOURCES	${DOOMCLASSIC_XAUDIO2_SOURCES})
+		endif()
 	endif()
 	
 	if(FFMPEG)
@@ -1523,6 +1539,7 @@ if(MSVC)
 			include_directories(libs/ffmpeg-win64/include/libavformat)
 			include_directories(libs/ffmpeg-win64/include/libavdevice)
 			include_directories(libs/ffmpeg-win64/include/libavcodec)
+			include_directories(libs/ffmpeg-win64/include/libswresample)
 			
 			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/ffmpeg-win64/lib)
 		else()
@@ -1531,6 +1548,7 @@ if(MSVC)
 			include_directories(libs/ffmpeg-win32/include/libavformat)
 			include_directories(libs/ffmpeg-win32/include/libavdevice)
 			include_directories(libs/ffmpeg-win32/include/libavcodec)
+			include_directories(libs/ffmpeg-win32/include/libswresample)
 			
 			link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libs/ffmpeg-win32/lib)
 		endif()
@@ -1539,7 +1557,8 @@ if(MSVC)
 				avcodec
 				avformat
 				avutil
-				swscale)
+				swscale
+				swresample)
 		
 	endif()
 	
@@ -1710,22 +1729,26 @@ else()
 		if(OPENAL)
 			find_package(OpenAL REQUIRED)
 			add_definitions(-DUSE_OPENAL)
-   
-            # SRS - Added support for OpenAL Soft headers on OSX (vs default macOS SDK headers)
-            if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT OPENAL_INCLUDE_DIR MATCHES "SDKs/MacOSX.*\.sdk")
-                include_directories(${OPENAL_INCLUDE_DIR})
-                add_definitions(-DUSE_OPENAL_SOFT_INCLUDES)
-            endif()
+
+			# SRS - Added support for OpenAL Soft headers on OSX (vs default macOS SDK headers)
+			if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT OPENAL_INCLUDE_DIR MATCHES "SDKs/MacOSX.*\.sdk")
+				include_directories(${OPENAL_INCLUDE_DIR})
+				add_definitions(-DUSE_OPENAL_SOFT_INCLUDES)
+			endif()
 
 			list(APPEND RBDOOM3_INCLUDES ${OPENAL_INCLUDES})
-			list(APPEND RBDOOM3_SOURCES
-				${OPENAL_SOURCES}
-				${DOOMCLASSIC_OPENAL_SOURCES})
+			list(APPEND RBDOOM3_SOURCES ${OPENAL_SOURCES})
+				
+			if(DOOM_CLASSIC)
+				list(APPEND RBDOOM3_SOURCES	${DOOMCLASSIC_OPENAL_SOURCES})
+			endif()
 		else()
 			list(APPEND RBDOOM3_INCLUDES ${STUBAUDIO_INCLUDES})
-			list(APPEND RBDOOM3_SOURCES
-				${STUBAUDIO_SOURCES}
-				${DOOMCLASSIC_STUBAUDIO_SOURCES})
+			list(APPEND RBDOOM3_SOURCES ${STUBAUDIO_SOURCES})
+			
+			if(DOOM_CLASSIC)
+				list(APPEND RBDOOM3_SOURCES	${DOOMCLASSIC_STUBAUDIO_SOURCES})
+			endif()
 		endif()
 		
 		if(USE_VULKAN)
